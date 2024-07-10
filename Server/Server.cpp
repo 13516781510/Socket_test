@@ -1,15 +1,30 @@
-//
-// Created by 29451 on 2024/7/10.
-//
 #include <iostream>
 #include <winsock2.h>
+
 #pragma comment(lib, "ws2_32.lib")
+
+struct TargetData {
+	uint8_t state;
+	float x;
+	float y;
+	float z;
+	float rotation;
+};
+
+void printTargetData(const TargetData& data) {
+	std::cout << "State: " << (int)data.state << std::endl;
+	std::cout << "X: " << data.x << std::endl;
+	std::cout << "Y: " << data.y << std::endl;
+	std::cout << "Z: " << data.z << std::endl;
+	std::cout << "Rotation: " << data.rotation << std::endl;
+}
+
 int main() {
 	WSADATA wsaData;
 	SOCKET ServerSocket, ClientSocket;
 	struct sockaddr_in serverAddr, clientAddr;
 	int clientAddrSize = sizeof(clientAddr);
-	char buffer[1024];
+	TargetData data;
 	int bytesReceived;
 
 	// 初始化Winsock
@@ -28,11 +43,11 @@ int main() {
 
 	// 设置服务器地址和端口
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_addr.s_addr = INADDR_ANY;
-	serverAddr.sin_port = htons(8080);
+	serverAddr.sin_addr.s_addr = inet_addr("192.168.1.1"); // 修改为你的IP地址
+	serverAddr.sin_port = htons(12345); // 修改为你想使用的端口
 
 	// 绑定套接字
-	if (bind(ServerSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+	if (bind(ServerSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
 		std::cerr << "Bind failed" << std::endl;
 		closesocket(ServerSocket);
 		WSACleanup();
@@ -49,28 +64,40 @@ int main() {
 
 	std::cout << "Waiting for connections..." << std::endl;
 
-	// 接受客户端连接
-	ClientSocket = accept(ServerSocket, (struct sockaddr *) &clientAddr, &clientAddrSize);
-	if (ClientSocket == INVALID_SOCKET) {
-		std::cerr << "Accept failed" << std::endl;
-		closesocket(ServerSocket);
-		WSACleanup();
-		return 1;
+	while (true) {
+		// 接受客户端连接
+		ClientSocket = accept(ServerSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
+		if (ClientSocket == INVALID_SOCKET) {
+			std::cerr << "Accept failed" << std::endl;
+			closesocket(ServerSocket);
+			WSACleanup();
+			return 1;
+		}
+
+		std::cout << "Client connected" << std::endl;
+
+		while (true) {
+			// 接收数据
+			bytesReceived = recv(ClientSocket, (char*)&data, sizeof(data), 0);
+			if (bytesReceived > 0) {
+				std::cout << "Received TargetData:" << std::endl;
+				printTargetData(data);
+
+				// 回传数据
+				send(ClientSocket, (char*)&data, sizeof(data), 0);
+			} else if (bytesReceived == 0) {
+				std::cout << "Client disconnected" << std::endl;
+				break;
+			} else {
+				std::cerr << "Receive failed" << std::endl;
+				break;
+			}
+		}
+
+		closesocket(ClientSocket);
 	}
 
-	std::cout << "Client connected" << std::endl;
-
-	// 接收数据
-	bytesReceived = recv(ClientSocket, buffer, sizeof(buffer), 0);
-	if (bytesReceived > 0) {
-		std::cout << "Received: " << std::string(buffer, 0, bytesReceived) << std::endl;
-
-		// 回传数据
-		send(ClientSocket, buffer, bytesReceived, 0);
-	}
-
-	// 关闭套接字
-	closesocket(ClientSocket);
+	// 关闭服务器套接字
 	closesocket(ServerSocket);
 	WSACleanup();
 

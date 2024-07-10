@@ -1,6 +1,3 @@
-//
-// Created by 29451 on 2024/7/10.
-//
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,11 +5,27 @@
 #include <unistd.h>
 #include <cstring>
 
+struct TargetData {
+	uint8_t state;
+	float x;
+	float y;
+	float z;
+	float rotation;
+};
+
+void printTargetData(const TargetData& data) {
+	std::cout << "State: " << (int)data.state << std::endl;
+	std::cout << "X: " << data.x << std::endl;
+	std::cout << "Y: " << data.y << std::endl;
+	std::cout << "Z: " << data.z << std::endl;
+	std::cout << "Rotation: " << data.rotation << std::endl;
+}
+
 int main() {
 	int serverSocket, clientSocket;
 	struct sockaddr_in serverAddr, clientAddr;
 	socklen_t clientAddrSize = sizeof(clientAddr);
-	char buffer[1024];
+	TargetData data;
 	int bytesReceived;
 
 	// 创建套接字
@@ -56,12 +69,13 @@ int main() {
 
 		while (true) {
 			// 接收数据
-			bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+			bytesReceived = recv(clientSocket, (char*)&data, sizeof(data), 0);
 			if (bytesReceived > 0) {
-				std::cout << "Received: " << std::string(buffer, 0, bytesReceived) << std::endl;
+				std::cout << "Received TargetData:" << std::endl;
+				printTargetData(data);
 
 				// 回传数据
-				send(clientSocket, buffer, bytesReceived, 0);
+				send(clientSocket, (char*)&data, sizeof(data), 0);
 			} else if (bytesReceived == 0) {
 				std::cout << "Client disconnected" << std::endl;
 				break;
