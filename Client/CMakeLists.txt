@@ -1,3 +1,3 @@
 project(Client)
-#include_directories(../windows_Serial)
-add_executable(Client Client.cpp)
+include_directories(..)
+add_executable(Client Client.cpp ../TCP.cpp ../TCP.hpp)

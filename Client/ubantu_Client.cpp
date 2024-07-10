@@ -52,4 +52,37 @@ int main() {
 		// 模拟填充数据
 		data.state = 1;
 		data.x = 10.0f;
+		data.y = 20.0f;
+		data.z = 30.0f;
+		data.rotation = 45.0f;
 
+		std::cout << "Sending TargetData:" << std::endl;
+		printTargetData(data);
+
+		// 发送数据
+		bytesSent = send(clientSocket, (char*)&data, sizeof(data), 0);
+		if (bytesSent == -1) {
+			std::cerr << "Send failed" << std::endl;
+			close(clientSocket);
+			return 1;
+		}
+
+		// 接收数据
+		bytesReceived = recv(clientSocket, (char*)&data, sizeof(data), 0);
+		if (bytesReceived > 0) {
+			std::cout << "Received from server:" << std::endl;
+			printTargetData(data);
+		} else if (bytesReceived == 0) {
+			std::cout << "Server disconnected" << std::endl;
+			break;
+		} else {
+			std::cerr << "Receive failed" << std::endl;
+			break;
+		}
+	}
+
+	// 关闭客户端套接字
+	close(clientSocket);
+
+	return 0;
+}
